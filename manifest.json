@@ -1,0 +1,25 @@
+{
+  "name": "Tovarni Dnevnik - Dostave",
+  "short_name": "Dnevnik Dostava",
+  "description": "Evidencija dostava, vozača i troškova za dostavljačku firmu.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1B1F24",
+  "theme_color": "#1B1F24",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

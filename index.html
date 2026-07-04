@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Tovarni Dnevnik — Dostave</title>
+<meta name="theme-color" content="#1B1F24">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt:#1B1F24;
+    --asphalt-2:#262B32;
+    --paper:#EFE7D8;
+    --paper-2:#F7F2E7;
+    --ink:#23262B;
+    --ink-soft:#5B564A;
+    --signal:#E8A33D;
+    --signal-ink:#5A3B0E;
+    --route-green:#2F6F4E;
+    --alert:#C1443C;
+    --line:#D8CDB0;
+    --line-dark:#3A4048;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  ::selection{background:var(--signal); color:var(--asphalt);}
+
+  header.top{
+    background:var(--asphalt);
+    color:var(--paper-2);
+    padding:14px 18px 0 18px;
+    position:sticky; top:0; z-index:20;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);
+  }
+  .brand{display:flex; align-items:baseline; gap:10px; margin-bottom:10px;}
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--signal);
+  }
+  .brand h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:20px; margin:0; font-weight:700; letter-spacing:.01em;
+  }
+  nav.tabs{display:flex; gap:2px; overflow-x:auto;}
+  nav.tabs button{
+    background:none; border:none; color:#B8BDC4;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px; font-weight:600; padding:10px 14px 12px 14px;
+    cursor:pointer; white-space:nowrap; border-bottom:3px solid transparent;
+  }
+  nav.tabs button.active{color:var(--paper-2); border-bottom-color:var(--signal);}
+
+  main{max-width:920px; margin:0 auto; padding:18px 14px 60px 14px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .daybar{
+    display:flex; align-items:center; gap:8px; margin-bottom:16px;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:10px; padding:8px;
+  }
+  .daybar button{
+    background:var(--asphalt); color:var(--paper-2); border:none; border-radius:8px;
+    width:40px; height:40px; font-size:18px; cursor:pointer; flex-shrink:0;
+  }
+  .daybar input[type=date]{
+    flex:1; border:1px solid var(--line); border-radius:8px; padding:9px 10px;
+    font-family:'IBM Plex Mono', monospace; font-size:15px; background:#fff; color:var(--ink);
+  }
+  .daybar .today-btn{
+    background:var(--signal); color:var(--signal-ink); font-family:'IBM Plex Sans'; font-weight:600;
+    width:auto; padding:0 12px; font-size:13px;
+  }
+
+  .card{
+    background:var(--paper-2); border:1px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:16px;
+  }
+  .card h2{
+    font-family:'Space Grotesk', sans-serif; font-size:16px; margin:0 0 12px 0;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .n{
+    font-family:'IBM Plex Mono'; font-size:11px; color:var(--ink-soft);
+    border:1px solid var(--line); border-radius:4px; padding:2px 6px;
+  }
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .grid .full{grid-column:1/-1;}
+  @media (max-width:520px){ .grid{grid-template-columns:1fr;} }
+
+  label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+  select, input[type=text], input[type=number], input[type=time], input[type=datetime-local]{
+    width:100%; padding:11px 10px; border:1px solid var(--line); border-radius:8px;
+    font-size:15px; font-family:'IBM Plex Sans'; background:#fff; color:var(--ink);
+  }
+  select:focus, input:focus{outline:2px solid var(--signal); outline-offset:1px;}
+
+  .chiprow{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+  .chip{
+    border:1px solid var(--line); background:#fff; border-radius:20px; padding:6px 12px;
+    font-size:13px; cursor:pointer; font-family:'IBM Plex Mono';
+  }
+  .chip.selected{background:var(--signal); border-color:var(--signal); color:var(--signal-ink); font-weight:600;}
+
+  .timegrp{display:flex; gap:6px;}
+  .timegrp input{flex:1;}
+  .nowbtn{
+    background:var(--asphalt); color:var(--paper-2); border:none; border-radius:8px;
+    padding:0 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+
+  .btn-main{
+    width:100%; background:var(--route-green); color:#fff; border:none; border-radius:10px;
+    padding:14px; font-size:15px; font-weight:700; margin-top:6px; cursor:pointer;
+    font-family:'Space Grotesk', sans-serif; letter-spacing:.02em;
+  }
+  .btn-main.alert{background:var(--alert);}
+  .btn-ghost{
+    background:none; border:1px dashed var(--ink-soft); color:var(--ink-soft); border-radius:8px;
+    padding:8px 12px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans'; font-weight:600;
+  }
+
+  /* Ticket-style entries */
+  .ticket{
+    position:relative; background:var(--paper-2); border:1px solid var(--line);
+    border-radius:10px; padding:12px 14px 12px 22px; margin-bottom:10px;
+    display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+  }
+  .ticket::before{
+    content:""; position:absolute; left:0; top:6px; bottom:6px; width:0;
+    border-left:2px dashed var(--line-dark); opacity:.35;
+  }
+  .ticket .stamp{
+    position:absolute; top:8px; right:10px; font-family:'IBM Plex Mono'; font-size:10px;
+    text-transform:uppercase; letter-spacing:.08em; padding:2px 6px; border-radius:4px; font-weight:600;
+  }
+  .ticket .stamp.done{background:rgba(47,111,78,.15); color:var(--route-green);}
+  .ticket .stamp.open{background:rgba(232,163,61,.2); color:var(--signal-ink);}
+  .ticket .main{flex:1;}
+  .ticket .title{font-weight:700; font-size:14.5px; margin-bottom:2px;}
+  .ticket .sub{font-size:12.5px; color:var(--ink-soft); font-family:'IBM Plex Mono';}
+  .ticket .price{font-family:'IBM Plex Mono'; font-weight:600; font-size:15px; text-align:right; white-space:nowrap;}
+  .ticket .del{
+    background:none; border:none; color:var(--alert); font-size:18px; cursor:pointer; padding:0 0 0 6px;
+  }
+  .ticket-actions{display:flex; flex-direction:column; align-items:flex-end; gap:4px;}
+
+  .totals{display:flex; gap:10px; flex-wrap:wrap; margin-top:2px;}
+  .tot{
+    flex:1; min-width:110px; background:var(--asphalt); color:var(--paper-2); border-radius:10px;
+    padding:10px 12px;
+  }
+  .tot .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#9AA0A8;}
+  .tot .val{font-family:'IBM Plex Mono'; font-size:19px; font-weight:600; margin-top:2px;}
+  .tot.green .val{color:#7FD9AA;}
+  .tot.red .val{color:#F0938C;}
+  .tot.amber .val{color:var(--signal);}
+
+  .empty{text-align:center; padding:26px 10px; color:var(--ink-soft); font-size:13.5px;}
+
+  .settings-section{margin-bottom:22px;}
+  .settings-section h3{
+    font-family:'Space Grotesk'; font-size:14px; margin:0 0 8px 0; color:var(--ink);
+    border-bottom:1px solid var(--line); padding-bottom:6px;
+  }
+  .preset-list{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
+  .preset-item{
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px 8px 6px 10px;
+    font-size:13px; display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono';
+  }
+  .preset-item button{background:none; border:none; color:var(--alert); cursor:pointer; font-size:14px; padding:0;}
+  .add-row{display:flex; gap:6px;}
+  .add-row input{flex:1;}
+  .add-row button{
+    background:var(--signal); color:var(--signal-ink); border:none; border-radius:8px;
+    padding:0 14px; font-weight:700; cursor:pointer; font-size:14px;
+  }
+
+  .backup-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .backup-row button{
+    flex:1; min-width:140px; background:var(--asphalt); color:var(--paper-2); border:none;
+    border-radius:8px; padding:12px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  input[type=file]{display:none;}
+
+  table.report{width:100%; border-collapse:collapse; font-size:12.5px; font-family:'IBM Plex Mono';}
+  table.report th, table.report td{border-bottom:1px solid var(--line); padding:7px 6px; text-align:left;}
+  table.report th{color:var(--ink-soft); font-weight:600; text-transform:uppercase; font-size:10.5px; letter-spacing:.04em;}
+  .scrollx{overflow-x:auto;}
+
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:var(--asphalt); color:var(--paper-2); padding:10px 18px; border-radius:20px;
+    font-size:13px; font-weight:600; z-index:100; opacity:0; pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+
+  h2 .hint{font-size:11px; font-weight:400; color:var(--ink-soft); text-transform:none; letter-spacing:0;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="eyebrow">Dispečerski Alat</span>
+  </div>
+  <h1 style="margin-bottom:10px;">🚚 Tovarni Dnevnik</h1>
+  <nav class="tabs">
+    <button data-view="dostave" class="active">Dostave</button>
+    <button data-view="troskovi">Troškovi</button>
+    <button data-view="izvestaj">Izveštaj</button>
+    <button data-view="podesavanja">Podešavanja</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===================== DOSTAVE ===================== -->
+  <section id="view-dostave" class="view active">
+    <div class="daybar">
+      <button id="dPrev">‹</button>
+      <input type="date" id="dDate">
+      <button id="dNext">›</button>
+      <button class="today-btn" id="dToday">Danas</button>
+    </div>
+
+    <div class="card">
+      <h2>➕ Nova dostava</h2>
+      <div class="grid">
+        <div>
+          <label>Kategorija</label>
+          <select id="fCategory"></select>
+        </div>
+        <div>
+          <label>Naziv dostave</label>
+          <select id="fDeliveryName"></select>
+        </div>
+
+        <div class="full">
+          <label>Naručilac</label>
+          <input type="text" id="fClient" placeholder="Upišite ili izaberite ispod">
+          <div class="chiprow" id="fClientPresets"></div>
+        </div>
+
+        <div>
+          <label>Vozač</label>
+          <select id="fDriver"></select>
+        </div>
+        <div>
+          <label>Cena (RSD)</label>
+          <input type="text" id="fPrice" inputmode="decimal" placeholder="0">
+          <div class="chiprow" id="fPricePresets"></div>
+        </div>
+
+        <div>
+          <label>Početak dostave</label>
+          <div class="timegrp">
+            <input type="time" id="fStart">
+            <button class="nowbtn" data-target="fStart">Sada</button>
+          </div>
+        </div>
+        <div>
+          <label>Kraj dostave</label>
+          <div class="timegrp">
+            <input type="time" id="fEnd">
+            <button class="nowbtn" data-target="fEnd">Sada</button>
+          </div>
+        </div>
+
+        <div class="full">
+          <label>Napomena (opciono)</label>
+          <input type="text" id="fNote" placeholder="npr. dodatna napomena o dostavi">
+        </div>
+      </div>
+      <button class="btn-main" id="btnAddDelivery">Sačuvaj dostavu</button>
+    </div>
+
+    <div class="card">
+      <h2>Dostave <span class="n" id="deliveryCount">0</span></h2>
+      <div id="deliveryList"></div>
+    </div>
+
+    <div class="totals" id="dostaveTotals"></div>
+  </section>
+
+  <!-- ===================== TROSKOVI ===================== -->
+  <section id="view-troskovi" class="view">
+    <div class="daybar">
+      <button id="tPrev">‹</button>
+      <input type="date" id="tDate">
+      <button id="tNext">›</button>
+      <button class="today-btn" id="tToday">Danas</button>
+    </div>
+
+    <div class="card">
+      <h2>➕ Novi trošak</h2>
+      <div class="grid">
+        <div>
+          <label>Vrsta troška</label>
+          <select id="eType"></select>
+        </div>
+        <div>
+          <label>Vozač (opciono)</label>
+          <select id="eDriver"></select>
+        </div>
+        <div class="full">
+          <label>Opis</label>
+          <input type="text" id="eDesc" placeholder="npr. gorivo Beograd–Novi Sad">
+        </div>
+        <div>
+          <label>Iznos (RSD)</label>
+          <input type="text" id="eAmount" inputmode="decimal" placeholder="0">
+        </div>
+      </div>
+      <button class="btn-main alert" id="btnAddExpense">Sačuvaj trošak</button>
+    </div>
+
+    <div class="card">
+      <h2>Troškovi dana <span class="n" id="expenseCount">0</span></h2>
+      <div id="expenseList"></div>
+    </div>
+
+    <div class="totals" id="troskoviTotals"></div>
+  </section>
+
+  <!-- ===================== IZVESTAJ ===================== -->
+  <section id="view-izvestaj" class="view">
+    <div class="card">
+      <h2>📊 Pregled po danima</h2>
+      <div class="grid">
+        <div>
+          <label>Od datuma</label>
+          <input type="date" id="rFrom">
+        </div>
+        <div>
+          <label>Do datuma</label>
+          <input type="date" id="rTo">
+        </div>
+      </div>
+      <button class="btn-ghost" id="btnRunReport" style="margin-top:10px;">Prikaži izveštaj</button>
+    </div>
+
+    <div class="card">
+      <h2>Ukupno u periodu</h2>
+      <div class="totals" id="reportTotals"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dostave <span class="hint">(tabela)</span></h2>
+      <div class="scrollx">
+        <table class="report" id="reportDeliveryTable">
+          <thead><tr><th>Datum</th><th>Kategorija</th><th>Dostava</th><th>Naručilac</th><th>Vozač</th><th>Početak</th><th>Kraj</th><th>Cena</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Troškovi <span class="hint">(tabela)</span></h2>
+      <div class="scrollx">
+        <table class="report" id="reportExpenseTable">
+          <thead><tr><th>Datum</th><th>Vrsta</th><th>Vozač</th><th>Opis</th><th>Iznos</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Izvoz podataka</h2>
+      <div class="backup-row">
+        <button id="btnExportCsvDeliveries">⬇ CSV — dostave</button>
+        <button id="btnExportCsvExpenses">⬇ CSV — troškovi</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PODESAVANJA ===================== -->
+  <section id="view-podesavanja" class="view">
+
+    <div class="card settings-section">
+      <h3>Kategorije dostava</h3>
+      <div class="preset-list" id="listCategories"></div>
+      <div class="add-row">
+        <input type="text" id="newCategory" placeholder="Nova kategorija (npr. Rezervni delovi)">
+        <button data-add="category">Dodaj</button>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h3>Nazivi dostava (po kategoriji)</h3>
+      <label>Za koju kategoriju dodaješ naziv</label>
+      <select id="ddnCategorySelect" style="margin-bottom:10px;"></select>
+      <div class="preset-list" id="listDeliveryNames"></div>
+      <div class="add-row">
+        <input type="text" id="newDeliveryName" placeholder="npr. VSM-delovi">
+        <button data-add="deliveryname">Dodaj</button>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h3>Vozači</h3>
+      <div class="preset-list" id="listDrivers"></div>
+      <div class="add-row">
+        <input type="text" id="newDriver" placeholder="npr. SR - Srećko">
+        <button data-add="driver">Dodaj</button>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h3>Nalozi / naručioci (presetovani)</h3>
+      <div class="preset-list" id="listClients"></div>
+      <div class="add-row">
+        <input type="text" id="newClient" placeholder="npr. Firma DOO">
+        <button data-add="client">Dodaj</button>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h3>Preseti cena dostave (RSD)</h3>
+      <div class="preset-list" id="listPrices"></div>
+      <div class="add-row">
+        <input type="text" id="newPrice" inputmode="decimal" placeholder="npr. 1500">
+        <button data-add="price">Dodaj</button>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h3>Vrste troškova</h3>
+      <div class="preset-list" id="listExpenseTypes"></div>
+      <div class="add-row">
+        <input type="text" id="newExpenseType" placeholder="npr. Putarina">
+        <button data-add="expensetype">Dodaj</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-family:'Space Grotesk'; font-size:14px; margin:0 0 10px 0;">Rezervna kopija podataka</h3>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin-top:0;">
+        Svi podaci se čuvaju samo na ovom uređaju (u ovom pregledaču). Ako obrišete podatke pregledača,
+        podaci se gube. Preporuka: redovno (npr. jednom nedeljno) izvezite kopiju.
+      </p>
+      <div class="backup-row">
+        <button id="btnBackupExport">⬇ Izvezi kompletnu kopiju (.json)</button>
+        <button id="btnBackupImport">⬆ Učitaj kopiju (.json)</button>
+      </div>
+      <input type="file" id="backupFile" accept="application/json">
+    </div>
+
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================= STORAGE ========================= */
+const LS_SETTINGS = 'dnevnik_settings';
+const LS_DELIVERIES = 'dnevnik_deliveries';
+const LS_EXPENSES = 'dnevnik_expenses';
+
+const defaultSettings = {
+  categories: ['VSM', 'Lokalna dostava', 'Međugradska dostava'],
+  deliveryNames: {
+    'VSM': ['VSM-delovi'],
+    'Lokalna dostava': [],
+    'Međugradska dostava': []
+  },
+  drivers: ['SR - Srećko', 'BG - Bogdan'],
+  clients: [],
+  pricePresets: [1000, 1500, 2000],
+  expenseTypes: ['Gorivo', 'Dnevnice', 'Putarina', 'Ostalo']
+};
+
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    return JSON.parse(raw);
+  }catch(e){ return fallback; }
+}
+function saveJSON(key, val){
+  localStorage.setItem(key, JSON.stringify(val));
+}
+
+let settings = loadJSON(LS_SETTINGS, defaultSettings);
+let deliveries = loadJSON(LS_DELIVERIES, []);
+let expenses = loadJSON(LS_EXPENSES, []);
+
+function persistSettings(){ saveJSON(LS_SETTINGS, settings); }
+function persistDeliveries(){ saveJSON(LS_DELIVERIES, deliveries); }
+function persistExpenses(){ saveJSON(LS_EXPENSES, expenses); }
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function fmtMoney(n){
+  n = Number(n)||0;
+  return n.toLocaleString('sr-RS', {maximumFractionDigits:0}) + ' RSD';
+}
+function nowTimeStr(){
+  const d = new Date();
+  return d.toTimeString().slice(0,5);
+}
+
+/* ========================= TABS ========================= */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view === 'podesavanja') renderSettings();
+    if(btn.dataset.view === 'izvestaj') initReportDates();
+  });
+});
+
+/* ========================= DOSTAVE VIEW ========================= */
+const dDate = document.getElementById('dDate');
+dDate.value = todayStr();
+
+function fillCategorySelect(){
+  const sel = document.getElementById('fCategory');
+  sel.innerHTML = settings.categories.map(c=>`<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('');
+  fillDeliveryNameSelect();
+}
+function fillDeliveryNameSelect(){
+  const cat = document.getElementById('fCategory').value;
+  const sel = document.getElementById('fDeliveryName');
+  const names = (settings.deliveryNames[cat] || []);
+  sel.innerHTML = '<option value="">— izaberi ili upiši custom niže —</option>' +
+    names.map(n=>`<option value="${escAttr(n)}">${escHtml(n)}</option>`).join('') +
+    `<option value="__custom__">+ Novi custom naziv…</option>`;
+}
+document.getElementById('fCategory').addEventListener('change', fillDeliveryNameSelect);
+document.getElementById('fDeliveryName').addEventListener('change', (e)=>{
+  if(e.target.value === '__custom__'){
+    const val = prompt('Upiši novi naziv dostave za ovu kategoriju:');
+    if(val && val.trim()){
+      const cat = document.getElementById('fCategory').value;
+      if(!settings.deliveryNames[cat]) settings.deliveryNames[cat] = [];
+      settings.deliveryNames[cat].push(val.trim());
+      persistSettings();
+      fillDeliveryNameSelect();
+      document.getElementById('fDeliveryName').value = val.trim();
+    } else {
+      e.target.value = '';
+    }
+  }
+});
+
+function fillDriverSelect(selectEl, allowNone){
+  selectEl.innerHTML = (allowNone ? '<option value="">— bez vozača —</option>' : '') +
+    settings.drivers.map(d=>`<option value="${escAttr(d)}">${escHtml(d)}</option>`).join('');
+}
+
+function fillClientChips(){
+  const wrap = document.getElementById('fClientPresets');
+  wrap.innerHTML = settings.clients.map(c=>`<button type="button" class="chip" data-client="${escAttr(c)}">${escHtml(c)}</button>`).join('');
+  wrap.querySelectorAll('.chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      document.getElementById('fClient').value = ch.dataset.client;
+    });
+  });
+}
+
+function fillPriceChips(){
+  const wrap = document.getElementById('fPricePresets');
+  wrap.innerHTML = settings.pricePresets.map(p=>`<button type="button" class="chip" data-price="${p}">${fmtMoney(p)}</button>`).join('');
+  wrap.querySelectorAll('.chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      document.getElementById('fPrice').value = ch.dataset.price;
+      wrap.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+      ch.classList.add('selected');
+    });
+  });
+}
+
+document.querySelectorAll('.nowbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.getElementById(btn.dataset.target).value = nowTimeStr();
+  });
+});
+
+function initDostaveForm(){
+  fillCategorySelect();
+  fillDriverSelect(document.getElementById('fDriver'), false);
+  fillClientChips();
+  fillPriceChips();
+}
+
+document.getElementById('btnAddDelivery').addEventListener('click', ()=>{
+  const category = document.getElementById('fCategory').value;
+  const deliveryName = document.getElementById('fDeliveryName').value || '(bez naziva)';
+  const client = document.getElementById('fClient').value.trim();
+  const driver = document.getElementById('fDriver').value;
+  const price = document.getElementById('fPrice').value.replace(',', '.').trim();
+  const start = document.getElementById('fStart').value;
+  const end = document.getElementById('fEnd').value;
+  const note = document.getElementById('fNote').value.trim();
+
+  if(!client){ toast('Upišite naručioca'); return; }
+  if(price === '' || isNaN(Number(price))){ toast('Unesite ispravnu cenu'); return; }
+
+  deliveries.push({
+    id: uid(),
+    date: dDate.value,
+    category, deliveryName, client, driver,
+    start, end,
+    price: Number(price),
+    note,
+    createdAt: Date.now()
+  });
+  persistDeliveries();
+
+  // offer to save client as preset
+  if(client && !settings.clients.includes(client)){
+    settings.clients.push(client);
+    persistSettings();
+  }
+
+  document.getElementById('fClient').value = '';
+  document.getElementById('fPrice').value = '';
+  document.getElementById('fStart').value = '';
+  document.getElementById('fEnd').value = '';
+  document.getElementById('fNote').value = '';
+  document.querySelectorAll('#fPricePresets .chip').forEach(c=>c.classList.remove('selected'));
+
+  toast('Dostava sačuvana');
+  renderDeliveries();
+  fillClientChips();
+});
+
+function renderDeliveries(){
+  const date = dDate.value;
+  const list = deliveries.filter(d=>d.date === date).sort((a,b)=>a.createdAt-b.createdAt);
+  document.getElementById('deliveryCount').textContent = list.length;
+  const wrap = document.getElementById('deliveryList');
+  if(list.length === 0){
+    wrap.innerHTML = '<div class="empty">Nema unetih dostava za ovaj dan još uvek.</div>';
+  } else {
+    wrap.innerHTML = list.map(d=>{
+      const done = !!d.end;
+      return `<div class="ticket">
+        <span class="stamp ${done?'done':'open'}">${done?'Završeno':'U toku'}</span>
+        <div class="main">
+          <div class="title">${escHtml(d.deliveryName)} <span style="color:var(--ink-soft); font-weight:400;">— ${escHtml(d.category)}</span></div>
+          <div class="sub">${escHtml(d.client)} ${d.driver? '· '+escHtml(d.driver):''} ${d.start? '· od '+d.start:''} ${d.end? ' do '+d.end:''}</div>
+          ${d.note? `<div class="sub" style="margin-top:3px; font-style:italic;">${escHtml(d.note)}</div>`:''}
+        </div>
+        <div class="ticket-actions">
+          <div class="price">${fmtMoney(d.price)}</div>
+          <button class="del" data-del="${d.id}" title="Obriši">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.querySelectorAll('[data-del]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        if(confirm('Obrisati ovu dostavu?')){
+          deliveries = deliveries.filter(d=>d.id !== b.dataset.del);
+          persistDeliveries();
+          renderDeliveries();
+        }
+      });
+    });
+  }
+
+  const sum = list.reduce((s,d)=>s+Number(d.price||0),0);
+  document.getElementById('dostaveTotals').innerHTML = `
+    <div class="tot"><div class="label">Broj dostava</div><div class="val">${list.length}</div></div>
+    <div class="tot green"><div class="label">Ukupno naplaćeno</div><div class="val">${fmtMoney(sum)}</div></div>
+  `;
+}
+
+document.getElementById('dPrev').addEventListener('click', ()=>{ shiftDate(dDate, -1); renderDeliveries(); });
+document.getElementById('dNext').addEventListener('click', ()=>{ shiftDate(dDate, 1); renderDeliveries(); });
+document.getElementById('dToday').addEventListener('click', ()=>{ dDate.value = todayStr(); renderDeliveries(); });
+dDate.addEventListener('change', renderDeliveries);
+
+function shiftDate(input, delta){
+  const d = new Date(input.value + 'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  input.value = d.toISOString().slice(0,10);
+}
+
+/* ========================= TROSKOVI VIEW ========================= */
+const tDate = document.getElementById('tDate');
+tDate.value = todayStr();
+
+function initTroskoviForm(){
+  const sel = document.getElementById('eType');
+  sel.innerHTML = settings.expenseTypes.map(t=>`<option value="${escAttr(t)}">${escHtml(t)}</option>`).join('');
+  fillDriverSelect(document.getElementById('eDriver'), true);
+}
+
+document.getElementById('btnAddExpense').addEventListener('click', ()=>{
+  const type = document.getElementById('eType').value;
+  const driver = document.getElementById('eDriver').value;
+  const desc = document.getElementById('eDesc').value.trim();
+  const amount = document.getElementById('eAmount').value.replace(',', '.').trim();
+
+  if(amount === '' || isNaN(Number(amount))){ toast('Unesite ispravan iznos'); return; }
+
+  expenses.push({
+    id: uid(),
+    date: tDate.value,
+    type, driver, description: desc,
+    amount: Number(amount),
+    createdAt: Date.now()
+  });
+  persistExpenses();
+
+  document.getElementById('eDesc').value = '';
+  document.getElementById('eAmount').value = '';
+
+  toast('Trošak sačuvan');
+  renderExpenses();
+});
+
+function renderExpenses(){
+  const date = tDate.value;
+  const list = expenses.filter(e=>e.date === date).sort((a,b)=>a.createdAt-b.createdAt);
+  document.getElementById('expenseCount').textContent = list.length;
+  const wrap = document.getElementById('expenseList');
+  if(list.length === 0){
+    wrap.innerHTML = '<div class="empty">Nema unetih troškova za ovaj dan još uvek.</div>';
+  } else {
+    wrap.innerHTML = list.map(e=>{
+      return `<div class="ticket">
+        <div class="main">
+          <div class="title">${escHtml(e.type)}</div>
+          <div class="sub">${e.driver? escHtml(e.driver)+' · ':''}${escHtml(e.description||'—')}</div>
+        </div>
+        <div class="ticket-actions">
+          <div class="price">${fmtMoney(e.amount)}</div>
+          <button class="del" data-del="${e.id}" title="Obriši">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.querySelectorAll('[data-del]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        if(confirm('Obrisati ovaj trošak?')){
+          expenses = expenses.filter(e=>e.id !== b.dataset.del);
+          persistExpenses();
+          renderExpenses();
+        }
+      });
+    });
+  }
+  const sum = list.reduce((s,e)=>s+Number(e.amount||0),0);
+  document.getElementById('troskoviTotals').innerHTML = `
+    <div class="tot"><div class="label">Broj stavki</div><div class="val">${list.length}</div></div>
+    <div class="tot red"><div class="label">Ukupno troškova</div><div class="val">${fmtMoney(sum)}</div></div>
+  `;
+}
+
+document.getElementById('tPrev').addEventListener('click', ()=>{ shiftDate(tDate, -1); renderExpenses(); });
+document.getElementById('tNext').addEventListener('click', ()=>{ shiftDate(tDate, 1); renderExpenses(); });
+document.getElementById('tToday').addEventListener('click', ()=>{ tDate.value = todayStr(); renderExpenses(); });
+tDate.addEventListener('change', renderExpenses);
+
+/* ========================= IZVESTAJ VIEW ========================= */
+function initReportDates(){
+  if(!document.getElementById('rFrom').value){
+    const d = new Date();
+    d.setDate(d.getDate()-6);
+    document.getElementById('rFrom').value = d.toISOString().slice(0,10);
+    document.getElementById('rTo').value = todayStr();
+    runReport();
+  }
+}
+document.getElementById('btnRunReport').addEventListener('click', runReport);
+
+function runReport(){
+  const from = document.getElementById('rFrom').value;
+  const to = document.getElementById('rTo').value;
+  const dList = deliveries.filter(d=>d.date>=from && d.date<=to).sort((a,b)=>a.date.localeCompare(b.date)||a.createdAt-b.createdAt);
+  const eList = expenses.filter(e=>e.date>=from && e.date<=to).sort((a,b)=>a.date.localeCompare(b.date)||a.createdAt-b.createdAt);
+
+  const dSum = dList.reduce((s,d)=>s+Number(d.price||0),0);
+  const eSum = eList.reduce((s,e)=>s+Number(e.amount||0),0);
+
+  document.getElementById('reportTotals').innerHTML = `
+    <div class="tot green"><div class="label">Prihod (dostave)</div><div class="val">${fmtMoney(dSum)}</div></div>
+    <div class="tot red"><div class="label">Troškovi</div><div class="val">${fmtMoney(eSum)}</div></div>
+    <div class="tot amber"><div class="label">Neto</div><div class="val">${fmtMoney(dSum-eSum)}</div></div>
+  `;
+
+  document.querySelector('#reportDeliveryTable tbody').innerHTML = dList.map(d=>`
+    <tr><td>${d.date}</td><td>${escHtml(d.category)}</td><td>${escHtml(d.deliveryName)}</td>
+    <td>${escHtml(d.client)}</td><td>${escHtml(d.driver||'—')}</td><td>${d.start||'—'}</td><td>${d.end||'—'}</td><td>${fmtMoney(d.price)}</td></tr>
+  `).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--ink-soft);">Nema podataka</td></tr>';
+
+  document.querySelector('#reportExpenseTable tbody').innerHTML = eList.map(e=>`
+    <tr><td>${e.date}</td><td>${escHtml(e.type)}</td><td>${escHtml(e.driver||'—')}</td><td>${escHtml(e.description||'—')}</td><td>${fmtMoney(e.amount)}</td></tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--ink-soft);">Nema podataka</td></tr>';
+
+  window._reportDeliveries = dList;
+  window._reportExpenses = eList;
+}
+
+function toCsv(rows, headers){
+  const esc = (v)=> {
+    v = String(v ?? '');
+    if(v.includes(';') || v.includes('"') || v.includes('\n')){
+      v = '"'+v.replace(/"/g,'""')+'"';
+    }
+    return v;
+  };
+  const lines = [headers.map(esc).join(';')];
+  rows.forEach(r=> lines.push(r.map(esc).join(';')));
+  return lines.join('\n');
+}
+function downloadFile(filename, content, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnExportCsvDeliveries').addEventListener('click', ()=>{
+  const rows = (window._reportDeliveries||[]).map(d=>[d.date,d.category,d.deliveryName,d.client,d.driver,d.start,d.end,d.price,d.note]);
+  const csv = toCsv(rows, ['Datum','Kategorija','Dostava','Naručilac','Vozač','Početak','Kraj','Cena','Napomena']);
+  downloadFile('dostave_'+todayStr()+'.csv', '\uFEFF'+csv, 'text/csv;charset=utf-8');
+});
+document.getElementById('btnExportCsvExpenses').addEventListener('click', ()=>{
+  const rows = (window._reportExpenses||[]).map(e=>[e.date,e.type,e.driver,e.description,e.amount]);
+  const csv = toCsv(rows, ['Datum','Vrsta','Vozač','Opis','Iznos']);
+  downloadFile('troskovi_'+todayStr()+'.csv', '\uFEFF'+csv, 'text/csv;charset=utf-8');
+});
+
+/* ========================= PODESAVANJA VIEW ========================= */
+function renderSettings(){
+  renderPresetList('listCategories', settings.categories, (val)=>{
+    settings.categories = settings.categories.filter(c=>c!==val);
+    delete settings.deliveryNames[val];
+    persistSettings(); renderSettings(); refreshAllSelects();
+  });
+
+  const ddnSel = document.getElementById('ddnCategorySelect');
+  const prevVal = ddnSel.value;
+  ddnSel.innerHTML = settings.categories.map(c=>`<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('');
+  if(prevVal && settings.categories.includes(prevVal)) ddnSel.value = prevVal;
+  renderDeliveryNamesList();
+
+  renderPresetList('listDrivers', settings.drivers, (val)=>{
+    settings.drivers = settings.drivers.filter(d=>d!==val);
+    persistSettings(); renderSettings(); refreshAllSelects();
+  });
+  renderPresetList('listClients', settings.clients, (val)=>{
+    settings.clients = settings.clients.filter(c=>c!==val);
+    persistSettings(); renderSettings(); refreshAllSelects();
+  });
+  renderPresetList('listPrices', settings.pricePresets.map(String), (val)=>{
+    settings.pricePresets = settings.pricePresets.filter(p=>String(p)!==val);
+    persistSettings(); renderSettings(); refreshAllSelects();
+  }, (v)=>fmtMoney(v));
+  renderPresetList('listExpenseTypes', settings.expenseTypes, (val)=>{
+    settings.expenseTypes = settings.expenseTypes.filter(t=>t!==val);
+    persistSettings(); renderSettings(); refreshAllSelects();
+  });
+}
+
+function renderDeliveryNamesList(){
+  const cat = document.getElementById('ddnCategorySelect').value;
+  const names = settings.deliveryNames[cat] || [];
+  renderPresetList('listDeliveryNames', names, (val)=>{
+    settings.deliveryNames[cat] = (settings.deliveryNames[cat]||[]).filter(n=>n!==val);
+    persistSettings(); renderDeliveryNamesList(); refreshAllSelects();
+  });
+}
+document.getElementById('ddnCategorySelect').addEventListener('change', renderDeliveryNamesList);
+
+function renderPresetList(elId, items, onDelete, fmt){
+  const wrap = document.getElementById(elId);
+  if(items.length===0){ wrap.innerHTML = '<span style="font-size:12px; color:var(--ink-soft);">Nema stavki.</span>'; return; }
+  wrap.innerHTML = items.map(it=>`<span class="preset-item">${escHtml(fmt?fmt(it):it)}<button data-val="${escAttr(it)}">✕</button></span>`).join('');
+  wrap.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=> onDelete(b.dataset.val));
+  });
+}
+
+document.querySelectorAll('[data-add]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const kind = btn.dataset.add;
+    if(kind==='category'){
+      const inp = document.getElementById('newCategory');
+      const v = inp.value.trim();
+      if(v && !settings.categories.includes(v)){
+        settings.categories.push(v);
+        settings.deliveryNames[v] = [];
+        persistSettings(); inp.value=''; renderSettings(); refreshAllSelects();
+      }
+    } else if(kind==='deliveryname'){
+      const inp = document.getElementById('newDeliveryName');
+      const v = inp.value.trim();
+      const cat = document.getElementById('ddnCategorySelect').value;
+      if(v && cat){
+        if(!settings.deliveryNames[cat]) settings.deliveryNames[cat]=[];
+        if(!settings.deliveryNames[cat].includes(v)) settings.deliveryNames[cat].push(v);
+        persistSettings(); inp.value=''; renderDeliveryNamesList(); refreshAllSelects();
+      }
+    } else if(kind==='driver'){
+      const inp = document.getElementById('newDriver');
+      const v = inp.value.trim();
+      if(v && !settings.drivers.includes(v)){
+        settings.drivers.push(v); persistSettings(); inp.value=''; renderSettings(); refreshAllSelects();
+      }
+    } else if(kind==='client'){
+      const inp = document.getElementById('newClient');
+      const v = inp.value.trim();
+      if(v && !settings.clients.includes(v)){
+        settings.clients.push(v); persistSettings(); inp.value=''; renderSettings(); refreshAllSelects();
+      }
+    } else if(kind==='price'){
+      const inp = document.getElementById('newPrice');
+      const v = Number(inp.value.replace(',','.'));
+      if(!isNaN(v) && v>0 && !settings.pricePresets.includes(v)){
+        settings.pricePresets.push(v); persistSettings(); inp.value=''; renderSettings(); refreshAllSelects();
+      }
+    } else if(kind==='expensetype'){
+      const inp = document.getElementById('newExpenseType');
+      const v = inp.value.trim();
+      if(v && !settings.expenseTypes.includes(v)){
+        settings.expenseTypes.push(v); persistSettings(); inp.value=''; renderSettings(); refreshAllSelects();
+      }
+    }
+  });
+});
+
+function refreshAllSelects(){
+  initDostaveForm();
+  initTroskoviForm();
+}
+
+/* ========================= BACKUP ========================= */
+document.getElementById('btnBackupExport').addEventListener('click', ()=>{
+  const data = { settings, deliveries, expenses, exportedAt: new Date().toISOString() };
+  downloadFile('tovarni_dnevnik_backup_'+todayStr()+'.json', JSON.stringify(data, null, 2), 'application/json');
+  toast('Kopija sačuvana');
+});
+document.getElementById('btnBackupImport').addEventListener('click', ()=>{
+  document.getElementById('backupFile').click();
+});
+document.getElementById('backupFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!confirm('Ovo će zameniti sve trenutne podatke podacima iz fajla. Nastaviti?')) return;
+      settings = data.settings || defaultSettings;
+      deliveries = data.deliveries || [];
+      expenses = data.expenses || [];
+      persistSettings(); persistDeliveries(); persistExpenses();
+      refreshAllSelects(); renderDeliveries(); renderExpenses(); renderSettings();
+      toast('Podaci učitani');
+    }catch(err){
+      alert('Greška: fajl nije ispravan.');
+    }
+  };
+  reader.readAsText(file);
+});
+
+/* ========================= UTIL ========================= */
+function escHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escAttr(s){ return escHtml(s); }
+
+/* ========================= INIT ========================= */
+refreshAllSelects();
+renderDeliveries();
+renderExpenses();
+
+/* ========================= PWA / OFFLINE ========================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
