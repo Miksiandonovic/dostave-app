@@ -240,13 +240,9 @@
     <div class="card">
       <h2>➕ Nova dostava</h2>
       <div class="grid">
-        <div>
+        <div class="full">
           <label>Kategorija</label>
           <select id="fCategory"></select>
-        </div>
-        <div>
-          <label>Naziv dostave</label>
-          <select id="fDeliveryName"></select>
         </div>
 
         <div class="full">
@@ -362,7 +358,7 @@
       <h2>Dostave <span class="hint">(tabela)</span></h2>
       <div class="scrollx">
         <table class="report" id="reportDeliveryTable">
-          <thead><tr><th>Datum</th><th>Kategorija</th><th>Dostava</th><th>Naručilac</th><th>Vozač</th><th>Početak</th><th>Kraj</th><th>Cena</th></tr></thead>
+          <thead><tr><th>Datum</th><th>Kategorija</th><th>Naručilac</th><th>Vozač</th><th>Početak</th><th>Kraj</th><th>Cena</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -376,6 +372,36 @@
           <tbody></tbody>
         </table>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>👤 Zarada po vozaču <span class="hint">(dnevnice se odbijaju od zarade)</span></h2>
+      <div class="scrollx">
+        <table class="report" id="reportDriverDailyTable">
+          <thead><tr><th>Datum</th><th>Vozač</th><th>Zarada</th><th>Dnevnice</th><th>Ostali troškovi</th><th>Neto</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Ukupno po vozaču za period <span class="hint">(sortirano po % povrata, od najnižeg)</span></h2>
+      <div class="scrollx">
+        <table class="report" id="reportDriverSummaryTable">
+          <thead><tr><th>Vozač</th><th>Zarada</th><th>Dnevnice</th><th>Ostali troškovi</th><th>Neto</th><th>% Povrat</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📈 Grafik — zarada i neto po vozaču</h2>
+      <canvas id="chartDriverEarnings" height="220"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>📈 Grafik — ukupna dnevna zarada firme</h2>
+      <canvas id="chartDailyTotals" height="220"></canvas>
     </div>
 
     <div class="card">
@@ -396,17 +422,6 @@
       <div class="add-row">
         <input type="text" id="newCategory" placeholder="Nova kategorija (npr. Rezervni delovi)">
         <button data-add="category">Dodaj</button>
-      </div>
-    </div>
-
-    <div class="card settings-section">
-      <h3>Nazivi dostava (po kategoriji)</h3>
-      <label>Za koju kategoriju dodaješ naziv</label>
-      <select id="ddnCategorySelect" style="margin-bottom:10px;"></select>
-      <div class="preset-list" id="listDeliveryNames"></div>
-      <div class="add-row">
-        <input type="text" id="newDeliveryName" placeholder="npr. VSM-delovi">
-        <button data-add="deliveryname">Dodaj</button>
       </div>
     </div>
 
@@ -465,6 +480,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="chart.min.js"></script>
 <script>
 /* ========================= STORAGE ========================= */
 const LS_SETTINGS = 'dnevnik_settings';
@@ -473,16 +489,15 @@ const LS_EXPENSES = 'dnevnik_expenses';
 
 const defaultSettings = {
   categories: ['VSM', 'Lokalna dostava', 'Međugradska dostava'],
-  deliveryNames: {
-    'VSM': ['VSM-delovi'],
-    'Lokalna dostava': [],
-    'Međugradska dostava': []
-  },
   drivers: ['SR - Srećko', 'BG - Bogdan'],
   clients: [],
   pricePresets: [1000, 1500, 2000],
   expenseTypes: ['Gorivo', 'Dnevnice', 'Putarina', 'Ostalo']
 };
+
+/* Sorting helpers — sve liste se prikazuju sortirano */
+function sortAlpha(arr){ return [...arr].sort((a,b)=> String(a).localeCompare(String(b), 'sr')); }
+function sortNum(arr){ return [...arr].sort((a,b)=> Number(a)-Number(b)); }
 
 function loadJSON(key, fallback){
   try{
@@ -544,42 +559,17 @@ dDate.value = todayStr();
 
 function fillCategorySelect(){
   const sel = document.getElementById('fCategory');
-  sel.innerHTML = settings.categories.map(c=>`<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('');
-  fillDeliveryNameSelect();
+  sel.innerHTML = sortAlpha(settings.categories).map(c=>`<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('');
 }
-function fillDeliveryNameSelect(){
-  const cat = document.getElementById('fCategory').value;
-  const sel = document.getElementById('fDeliveryName');
-  const names = (settings.deliveryNames[cat] || []);
-  sel.innerHTML = '<option value="">— izaberi ili upiši custom niže —</option>' +
-    names.map(n=>`<option value="${escAttr(n)}">${escHtml(n)}</option>`).join('') +
-    `<option value="__custom__">+ Novi custom naziv…</option>`;
-}
-document.getElementById('fCategory').addEventListener('change', fillDeliveryNameSelect);
-document.getElementById('fDeliveryName').addEventListener('change', (e)=>{
-  if(e.target.value === '__custom__'){
-    const val = prompt('Upiši novi naziv dostave za ovu kategoriju:');
-    if(val && val.trim()){
-      const cat = document.getElementById('fCategory').value;
-      if(!settings.deliveryNames[cat]) settings.deliveryNames[cat] = [];
-      settings.deliveryNames[cat].push(val.trim());
-      persistSettings();
-      fillDeliveryNameSelect();
-      document.getElementById('fDeliveryName').value = val.trim();
-    } else {
-      e.target.value = '';
-    }
-  }
-});
 
 function fillDriverSelect(selectEl, allowNone){
   selectEl.innerHTML = (allowNone ? '<option value="">— bez vozača —</option>' : '') +
-    settings.drivers.map(d=>`<option value="${escAttr(d)}">${escHtml(d)}</option>`).join('');
+    sortAlpha(settings.drivers).map(d=>`<option value="${escAttr(d)}">${escHtml(d)}</option>`).join('');
 }
 
 function fillClientChips(){
   const wrap = document.getElementById('fClientPresets');
-  wrap.innerHTML = settings.clients.map(c=>`<button type="button" class="chip" data-client="${escAttr(c)}">${escHtml(c)}</button>`).join('');
+  wrap.innerHTML = sortAlpha(settings.clients).map(c=>`<button type="button" class="chip" data-client="${escAttr(c)}">${escHtml(c)}</button>`).join('');
   wrap.querySelectorAll('.chip').forEach(ch=>{
     ch.addEventListener('click', ()=>{
       document.getElementById('fClient').value = ch.dataset.client;
@@ -589,7 +579,7 @@ function fillClientChips(){
 
 function fillPriceChips(){
   const wrap = document.getElementById('fPricePresets');
-  wrap.innerHTML = settings.pricePresets.map(p=>`<button type="button" class="chip" data-price="${p}">${fmtMoney(p)}</button>`).join('');
+  wrap.innerHTML = sortNum(settings.pricePresets).map(p=>`<button type="button" class="chip" data-price="${p}">${fmtMoney(p)}</button>`).join('');
   wrap.querySelectorAll('.chip').forEach(ch=>{
     ch.addEventListener('click', ()=>{
       document.getElementById('fPrice').value = ch.dataset.price;
@@ -614,7 +604,6 @@ function initDostaveForm(){
 
 document.getElementById('btnAddDelivery').addEventListener('click', ()=>{
   const category = document.getElementById('fCategory').value;
-  const deliveryName = document.getElementById('fDeliveryName').value || '(bez naziva)';
   const client = document.getElementById('fClient').value.trim();
   const driver = document.getElementById('fDriver').value;
   const price = document.getElementById('fPrice').value.replace(',', '.').trim();
@@ -628,7 +617,7 @@ document.getElementById('btnAddDelivery').addEventListener('click', ()=>{
   deliveries.push({
     id: uid(),
     date: dDate.value,
-    category, deliveryName, client, driver,
+    category, client, driver,
     start, end,
     price: Number(price),
     note,
@@ -667,7 +656,7 @@ function renderDeliveries(){
       return `<div class="ticket">
         <span class="stamp ${done?'done':'open'}">${done?'Završeno':'U toku'}</span>
         <div class="main">
-          <div class="title">${escHtml(d.deliveryName)} <span style="color:var(--ink-soft); font-weight:400;">— ${escHtml(d.category)}</span></div>
+          <div class="title">${escHtml(d.category)}</div>
           <div class="sub">${escHtml(d.client)} ${d.driver? '· '+escHtml(d.driver):''} ${d.start? '· od '+d.start:''} ${d.end? ' do '+d.end:''}</div>
           ${d.note? `<div class="sub" style="margin-top:3px; font-style:italic;">${escHtml(d.note)}</div>`:''}
         </div>
@@ -810,9 +799,9 @@ function runReport(){
   `;
 
   document.querySelector('#reportDeliveryTable tbody').innerHTML = dList.map(d=>`
-    <tr><td>${d.date}</td><td>${escHtml(d.category)}</td><td>${escHtml(d.deliveryName)}</td>
+    <tr><td>${d.date}</td><td>${escHtml(d.category)}</td>
     <td>${escHtml(d.client)}</td><td>${escHtml(d.driver||'—')}</td><td>${d.start||'—'}</td><td>${d.end||'—'}</td><td>${fmtMoney(d.price)}</td></tr>
-  `).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--ink-soft);">Nema podataka</td></tr>';
+  `).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--ink-soft);">Nema podataka</td></tr>';
 
   document.querySelector('#reportExpenseTable tbody').innerHTML = eList.map(e=>`
     <tr><td>${e.date}</td><td>${escHtml(e.type)}</td><td>${escHtml(e.driver||'—')}</td><td>${escHtml(e.description||'—')}</td><td>${fmtMoney(e.amount)}</td></tr>
@@ -820,6 +809,103 @@ function runReport(){
 
   window._reportDeliveries = dList;
   window._reportExpenses = eList;
+
+  renderDriverReport(dList, eList, from, to);
+}
+
+/* ---- Izveštaj po vozaču: zarada, dnevnice (odbijaju se), ostali troškovi, neto, % povrat ---- */
+function renderDriverReport(dList, eList, from, to){
+  const drivers = sortAlpha([...new Set([
+    ...dList.map(d=>d.driver).filter(Boolean),
+    ...eList.map(e=>e.driver).filter(Boolean)
+  ])]);
+
+  // dnevni redovi: datum x vozač
+  const dailyMap = {}; // key: date|driver -> {zarada,dnevnice,ostali}
+  dList.forEach(d=>{
+    if(!d.driver) return;
+    const k = d.date+'|'+d.driver;
+    if(!dailyMap[k]) dailyMap[k] = {date:d.date, driver:d.driver, zarada:0, dnevnice:0, ostali:0};
+    dailyMap[k].zarada += Number(d.price||0);
+  });
+  eList.forEach(e=>{
+    if(!e.driver) return;
+    const k = e.date+'|'+e.driver;
+    if(!dailyMap[k]) dailyMap[k] = {date:e.date, driver:e.driver, zarada:0, dnevnice:0, ostali:0};
+    if(e.type === 'Dnevnice') dailyMap[k].dnevnice += Number(e.amount||0);
+    else dailyMap[k].ostali += Number(e.amount||0);
+  });
+  const dailyRows = Object.values(dailyMap).sort((a,b)=> a.date.localeCompare(b.date) || a.driver.localeCompare(b.driver,'sr'));
+
+  document.querySelector('#reportDriverDailyTable tbody').innerHTML = dailyRows.map(r=>{
+    const neto = r.zarada - r.dnevnice - r.ostali;
+    return `<tr><td>${r.date}</td><td>${escHtml(r.driver)}</td><td>${fmtMoney(r.zarada)}</td><td>${fmtMoney(r.dnevnice)}</td><td>${fmtMoney(r.ostali)}</td><td>${fmtMoney(neto)}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center; color:var(--ink-soft);">Nema podataka</td></tr>';
+
+  // ukupno po vozaču, sortirano po % povrata (od najnižeg)
+  const summary = drivers.map(driver=>{
+    const zarada = dList.filter(d=>d.driver===driver).reduce((s,d)=>s+Number(d.price||0),0);
+    const dnevnice = eList.filter(e=>e.driver===driver && e.type==='Dnevnice').reduce((s,e)=>s+Number(e.amount||0),0);
+    const ostali = eList.filter(e=>e.driver===driver && e.type!=='Dnevnice').reduce((s,e)=>s+Number(e.amount||0),0);
+    const neto = zarada - dnevnice - ostali;
+    const povrat = zarada > 0 ? (neto/zarada*100) : 0;
+    return {driver, zarada, dnevnice, ostali, neto, povrat};
+  }).sort((a,b)=> a.povrat - b.povrat);
+
+  document.querySelector('#reportDriverSummaryTable tbody').innerHTML = summary.map(r=>`
+    <tr><td>${escHtml(r.driver)}</td><td>${fmtMoney(r.zarada)}</td><td>${fmtMoney(r.dnevnice)}</td><td>${fmtMoney(r.ostali)}</td><td>${fmtMoney(r.neto)}</td><td>${r.povrat.toFixed(1)}%</td></tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center; color:var(--ink-soft);">Nema podataka</td></tr>';
+
+  renderDriverChart(summary);
+  renderDailyTrendChart(dList, from, to);
+}
+
+/* ---- Grafici (Chart.js, ucitan lokalno iz chart.min.js — radi i bez interneta) ---- */
+let _chartDriver, _chartDaily;
+
+function renderDriverChart(summary){
+  const ctx = document.getElementById('chartDriverEarnings');
+  if(_chartDriver) _chartDriver.destroy();
+  if(summary.length === 0){ return; }
+  _chartDriver = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: summary.map(s=>s.driver),
+      datasets: [
+        { label: 'Zarada', data: summary.map(s=>s.zarada), backgroundColor: '#E8A33D' },
+        { label: 'Neto', data: summary.map(s=>s.neto), backgroundColor: '#2F6F4E' }
+      ]
+    },
+    options: {
+      responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ family:'IBM Plex Sans' } } } },
+      scales:{ y:{ ticks:{ callback:(v)=> v.toLocaleString('sr-RS') } } }
+    }
+  });
+}
+
+function renderDailyTrendChart(dList, from, to){
+  const ctx = document.getElementById('chartDailyTotals');
+  if(_chartDaily) _chartDaily.destroy();
+  // svi datumi u opsegu
+  const days = [];
+  let cur = new Date(from+'T00:00:00');
+  const end = new Date(to+'T00:00:00');
+  while(cur <= end){ days.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+  const totalsByDay = days.map(day=> dList.filter(d=>d.date===day).reduce((s,d)=>s+Number(d.price||0),0));
+
+  _chartDaily = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [{ label:'Ukupna zarada dana', data: totalsByDay, borderColor:'#E8A33D', backgroundColor:'rgba(232,163,61,.2)', fill:true, tension:.25 }]
+    },
+    options: {
+      responsive:true,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ ticks:{ callback:(v)=> v.toLocaleString('sr-RS') } } }
+    }
+  });
 }
 
 function toCsv(rows, headers){
@@ -844,8 +930,8 @@ function downloadFile(filename, content, mime){
 }
 
 document.getElementById('btnExportCsvDeliveries').addEventListener('click', ()=>{
-  const rows = (window._reportDeliveries||[]).map(d=>[d.date,d.category,d.deliveryName,d.client,d.driver,d.start,d.end,d.price,d.note]);
-  const csv = toCsv(rows, ['Datum','Kategorija','Dostava','Naručilac','Vozač','Početak','Kraj','Cena','Napomena']);
+  const rows = (window._reportDeliveries||[]).map(d=>[d.date,d.category,d.client,d.driver,d.start,d.end,d.price,d.note]);
+  const csv = toCsv(rows, ['Datum','Kategorija','Naručilac','Vozač','Početak','Kraj','Cena','Napomena']);
   downloadFile('dostave_'+todayStr()+'.csv', '\uFEFF'+csv, 'text/csv;charset=utf-8');
 });
 document.getElementById('btnExportCsvExpenses').addEventListener('click', ()=>{
@@ -856,45 +942,28 @@ document.getElementById('btnExportCsvExpenses').addEventListener('click', ()=>{
 
 /* ========================= PODESAVANJA VIEW ========================= */
 function renderSettings(){
-  renderPresetList('listCategories', settings.categories, (val)=>{
+  renderPresetList('listCategories', sortAlpha(settings.categories), (val)=>{
     settings.categories = settings.categories.filter(c=>c!==val);
-    delete settings.deliveryNames[val];
     persistSettings(); renderSettings(); refreshAllSelects();
   });
 
-  const ddnSel = document.getElementById('ddnCategorySelect');
-  const prevVal = ddnSel.value;
-  ddnSel.innerHTML = settings.categories.map(c=>`<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('');
-  if(prevVal && settings.categories.includes(prevVal)) ddnSel.value = prevVal;
-  renderDeliveryNamesList();
-
-  renderPresetList('listDrivers', settings.drivers, (val)=>{
+  renderPresetList('listDrivers', sortAlpha(settings.drivers), (val)=>{
     settings.drivers = settings.drivers.filter(d=>d!==val);
     persistSettings(); renderSettings(); refreshAllSelects();
   });
-  renderPresetList('listClients', settings.clients, (val)=>{
+  renderPresetList('listClients', sortAlpha(settings.clients), (val)=>{
     settings.clients = settings.clients.filter(c=>c!==val);
     persistSettings(); renderSettings(); refreshAllSelects();
   });
-  renderPresetList('listPrices', settings.pricePresets.map(String), (val)=>{
+  renderPresetList('listPrices', sortNum(settings.pricePresets).map(String), (val)=>{
     settings.pricePresets = settings.pricePresets.filter(p=>String(p)!==val);
     persistSettings(); renderSettings(); refreshAllSelects();
   }, (v)=>fmtMoney(v));
-  renderPresetList('listExpenseTypes', settings.expenseTypes, (val)=>{
+  renderPresetList('listExpenseTypes', sortAlpha(settings.expenseTypes), (val)=>{
     settings.expenseTypes = settings.expenseTypes.filter(t=>t!==val);
     persistSettings(); renderSettings(); refreshAllSelects();
   });
 }
-
-function renderDeliveryNamesList(){
-  const cat = document.getElementById('ddnCategorySelect').value;
-  const names = settings.deliveryNames[cat] || [];
-  renderPresetList('listDeliveryNames', names, (val)=>{
-    settings.deliveryNames[cat] = (settings.deliveryNames[cat]||[]).filter(n=>n!==val);
-    persistSettings(); renderDeliveryNamesList(); refreshAllSelects();
-  });
-}
-document.getElementById('ddnCategorySelect').addEventListener('change', renderDeliveryNamesList);
 
 function renderPresetList(elId, items, onDelete, fmt){
   const wrap = document.getElementById(elId);
@@ -913,17 +982,7 @@ document.querySelectorAll('[data-add]').forEach(btn=>{
       const v = inp.value.trim();
       if(v && !settings.categories.includes(v)){
         settings.categories.push(v);
-        settings.deliveryNames[v] = [];
         persistSettings(); inp.value=''; renderSettings(); refreshAllSelects();
-      }
-    } else if(kind==='deliveryname'){
-      const inp = document.getElementById('newDeliveryName');
-      const v = inp.value.trim();
-      const cat = document.getElementById('ddnCategorySelect').value;
-      if(v && cat){
-        if(!settings.deliveryNames[cat]) settings.deliveryNames[cat]=[];
-        if(!settings.deliveryNames[cat].includes(v)) settings.deliveryNames[cat].push(v);
-        persistSettings(); inp.value=''; renderDeliveryNamesList(); refreshAllSelects();
       }
     } else if(kind==='driver'){
       const inp = document.getElementById('newDriver');
